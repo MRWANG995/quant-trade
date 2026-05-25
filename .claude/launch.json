@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "backend",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "9999", "--log-level", "warning"],
+      "port": 9999,
+      "cwd": "backend",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 9998,
+      "cwd": "frontend"
+    }
+  ]
+}
