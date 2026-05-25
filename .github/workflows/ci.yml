@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11"]
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Import smoke test
+        # 任何模块导入错误都会在这里炸出来（缺包 / 语法错误 / 循环 import）
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci.db
+          SECRET_KEY: ci-only-key
+          STOOQ_API_KEY: ""
+          GEMINI_API_KEY: ""
+        run: PYTHONPATH=. python -c "from app.main import app; print('app imported OK with', len(app.routes), 'routes')"
+
+      - name: Run Alembic migrations
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci.db
+        run: PYTHONPATH=. alembic upgrade head
+
+      - name: Verify migration head matches model state
+        # alembic check (>=1.13) 检测模型 / 数据库 schema 漂移
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci.db
+        run: PYTHONPATH=. alembic check
+        continue-on-error: true
+
+      - name: Python syntax check (compile all)
+        run: python -m compileall -q app
+
+  frontend:
+    name: Frontend (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ["20"]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check + build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:9999
+        run: npm run build
