@@ -7,12 +7,16 @@ services:
     name: quant-trade-backend
     runtime: python
     plan: free                      # 免费档：闲置 15 分钟会睡，首访问 30-60s 唤醒
-    region: singapore               # 离国内最近的免费区；也可改 oregon
+    region: oregon                  # 免费档 Postgres 最稳；singapore 在某些时段会拒绝免费档
     rootDir: backend
     buildCommand: pip install -r requirements.txt && PYTHONPATH=. alembic upgrade head
     startCommand: PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level warning
-    healthCheckPath: /api/health
+    # 健康检查走 /docs（FastAPI 自动生成，永远 200，不被 auth 守护）
+    healthCheckPath: /docs
     envVars:
+      - key: PYTHON_VERSION
+        # 锁定 Python 版本，避免 Render 选最新的 3.14 引入兼容性问题
+        value: "3.11.10"
       - key: DATABASE_URL
         fromDatabase:
           name: quant-trade-db
@@ -46,4 +50,4 @@ databases:
     plan: free                      # 免费档：1GB 存储，90 天后会被自动删
     databaseName: quant_trade
     user: quant
-    region: singapore
+    region: oregon
