@@ -57,6 +57,7 @@ settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=settings.cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,4 +72,4 @@ app.websocket("/ws/live")(websocket_endpoint)
 @app.get("/")
 async def root():
     """误开 API 端口时跳转到前端。"""
-    return RedirectResponse(url="http://localhost:9998", status_code=302)
+    return RedirectResponse(url=settings.frontend_url, status_code=302)

@@ -1,5 +1,7 @@
 from functools import lru_cache
+from typing import Optional
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +9,14 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     database_url: str = "sqlite+aiosqlite:///./quant_trade.db"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_db_url(cls, v: object) -> object:
+        """Render 等托管平台默认给 'postgresql://...'，我们用 asyncpg 需要 '+asyncpg' 前缀。"""
+        if isinstance(v, str) and v.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + v[len("postgresql://"):]
+        return v
     broker_mode: str = "paper"
     max_trades_per_day: int = 2
     max_trades_per_symbol_per_day: int = 1
@@ -49,6 +59,11 @@ class Settings(BaseSettings):
         "http://localhost:9998",
         "http://127.0.0.1:9998",
     ]
+    # 正则形式的 CORS 白名单（用于 Vercel 等域名动态的场景）。
+    # 例：'https://.*\.vercel\.app' 匹配 quant-trade.vercel.app 及所有预览 URL。
+    cors_origin_regex: Optional[str] = None
+    # 部署后填上前端公开地址，根 GET / 会重定向到这里。
+    frontend_url: str = "http://localhost:9998"
 
     secret_key: str = "dev-change-me-in-production"
     jwt_algorithm: str = "HS256"

@@ -1,0 +1,49 @@
+# Render Blueprint：一键定义后端 + Postgres，并把环境变量配置好
+# 用法：在 https://render.com 仪表盘里 New → Blueprint → 选 quant-trade 仓库
+# Render 会读这个文件创建服务，sync:false 的几个 secret 部署后在 dashboard 手动填
+
+services:
+  - type: web
+    name: quant-trade-backend
+    runtime: python
+    plan: free                      # 免费档：闲置 15 分钟会睡，首访问 30-60s 唤醒
+    region: singapore               # 离国内最近的免费区；也可改 oregon
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt && PYTHONPATH=. alembic upgrade head
+    startCommand: PYTHONPATH=. uvicorn app.main:app --host 0.0.0.0 --port $PORT --log-level warning
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quant-trade-db
+          property: connectionString
+      - key: BROKER_MODE
+        value: paper
+      - key: REQUIRE_AUTH
+        value: "true"
+      - key: ALLOW_REGISTRATION
+        value: "false"
+      - key: ADMIN_EMAIL
+        value: admin@example.com
+      - key: SECRET_KEY
+        generateValue: true          # Render 自动生成强随机 secret
+      - key: CORS_ORIGIN_REGEX
+        # 允许 Vercel 主域名和所有 PR 预览域；如换其它前端域名按需修改
+        value: "https://.*\\.vercel\\.app"
+      # ↓↓ 以下三个需要你在 Render dashboard 手动填，避免明文进 git ↓↓
+      - key: STOOQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # ↑↑ 前端 Vercel 部署完后再回 dashboard 填这一项 ↑↑
+      - key: FRONTEND_URL
+        sync: false
+
+databases:
+  - name: quant-trade-db
+    plan: free                      # 免费档：1GB 存储，90 天后会被自动删
+    databaseName: quant_trade
+    user: quant
+    region: singapore
