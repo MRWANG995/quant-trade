@@ -360,6 +360,50 @@ async def sync_one(instrument_id: int, session: AsyncSession = Depends(get_db)):
     return {"symbol": inst.symbol, "inserted": count}
 
 
+@router.get("/agent/decision")
+async def get_cached_agent_decision(
+    strategy_id: int,
+    instrument_id: int,
+    session: AsyncSession = Depends(get_db),
+):
+    """只读：返回该品种最新行情日期的已缓存 Agent 决策；无缓存时 204。
+
+    给前端"打开 K 线就自动显示已有决策"用——不会触发 LLM 调用，零成本。
+    """
+    from sqlalchemy import select, func
+    from fastapi.responses import Response
+    from app.models.entities import Bar, AgentDecision
+
+    latest = await session.scalar(
+        select(func.max(Bar.trade_date)).where(Bar.instrument_id == instrument_id)
+    )
+    if not latest:
+        return Response(status_code=204)
+    result = await session.execute(
+        select(AgentDecision).where(
+            AgentDecision.strategy_id == strategy_id,
+            AgentDecision.instrument_id == instrument_id,
+            AgentDecision.decision_date == latest,
+        )
+    )
+    d = result.scalar_one_or_none()
+    if not d:
+        return Response(status_code=204)
+    return {
+        "instrument_id": d.instrument_id,
+        "symbol": "",  # 调用方自己有 symbol
+        "decision_date": d.decision_date.isoformat(),
+        "side": d.side,
+        "confidence": d.confidence,
+        "entry_price": d.entry_price,
+        "stop_loss": d.stop_loss,
+        "take_profit": d.take_profit,
+        "reason": d.reason,
+        "model": d.model,
+        "cached": True,
+    }
+
+
 @router.post("/agent/analyze")
 async def agent_analyze_instrument(
     strategy_id: int,

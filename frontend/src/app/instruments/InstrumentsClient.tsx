@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CandlestickChart, type PriceLevel } from "@/components/CandlestickChart";
 import { AgentWatchPanel } from "@/components/AgentWatchPanel";
 import type { Bar, Instrument } from "@/lib/api";
@@ -13,9 +14,25 @@ const TABS = [
   { key: "equity", label: "美股" },
 ];
 
+// 默认排序：BTC 优先，其次 XAUUSD，其次美股按字母
+const PRIORITY_SYMBOLS = ["BTC", "XAUUSD"];
+function priorityOf(sym: string): number {
+  const idx = PRIORITY_SYMBOLS.indexOf(sym);
+  return idx === -1 ? 999 : idx;
+}
+
 export function InstrumentsClient({ instruments }: { instruments: Instrument[] }) {
+  const searchParams = useSearchParams();
+  const symbolParam = searchParams.get("symbol");
+  const sorted = [...instruments].sort((a, b) => {
+    const pa = priorityOf(a.symbol);
+    const pb = priorityOf(b.symbol);
+    return pa !== pb ? pa - pb : a.symbol.localeCompare(b.symbol);
+  });
+  const initialSelected =
+    sorted.find((i) => i.symbol === symbolParam) || sorted[0] || null;
   const [tab, setTab] = useState("all");
-  const [selected, setSelected] = useState<Instrument | null>(instruments[0] ?? null);
+  const [selected, setSelected] = useState<Instrument | null>(initialSelected);
   const [bars, setBars] = useState<Bar[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -24,7 +41,7 @@ export function InstrumentsClient({ instruments }: { instruments: Instrument[] }
   const [agentLevels, setAgentLevels] = useState<PriceLevel[]>([]);
 
   const filtered =
-    tab === "all" ? instruments : instruments.filter((i) => i.asset_class === tab);
+    tab === "all" ? sorted : sorted.filter((i) => i.asset_class === tab);
 
   useEffect(() => {
     if (filtered.length === 0) {

@@ -5,16 +5,22 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
 
-面向国际市场（外汇、黄金、期货、美股）的日频量化交易系统：每日 1–2 笔开仓，含真实数据回测、模拟盘交易、LLM 对话生成策略、组合策略、Agent 信号策略。
+面向国际市场（**BTC / XAU / 美股 Magnificent 7**）的日频量化交易系统：真实行情、模拟盘、回测引擎、**LLM 对话生成策略**、**加权组合策略**、**Agent 看盘式实时分析**。
 
-![总览](docs/screenshots/dashboard.png)
+🌐 **Live Demo**：https://quant-trade-xylon01-s-projects.vercel.app
+
+![Agent 看盘 · BTC](docs/screenshots/instruments.png)
+
+> ☝️ Agent 看盘：选个 LLM Agent 策略 → 点"分析" → Gemini 实时看 K 线 + 指标 → K 线图上即时画出 入场（绿）/ 止损（红）/ 止盈（黄）三条价位线 + 中文交易理由
 
 ## ✨ 核心特性
 
 ### 📊 真实行情，零额外配置
-- **15 个品种**：EURUSD / GBPUSD / USDJPY / XAUUSD / ES / CL / AAPL / MSFT / GOOGL / AMZN / NVDA / META / TSLA / SPY / QQQ
-- **多源 fallback**：Stooq（主）→ Alpha Vantage → Frankfurter ECB（外汇兜底）→ Yahoo Finance
-- 一个免费的 Stooq Key 即可拉满 ~3 年日 K（约 11,000 根 bar）
+- **9 个品种**：BTC + XAUUSD + Magnificent 7（AAPL / MSFT / GOOGL / AMZN / NVDA / META / TSLA）
+- **多源调度**：
+  - BTC → **Coinbase Exchange**（公开、免 key、全球可用；Binance 美国 451 时备用）
+  - XAU + 美股 → **Stooq**（一个免费 key 拉满 ~3 年日 K）
+  - Alpha Vantage / Yahoo Finance 作 fallback
 
 ### 🧠 17+ 内置策略 + 三种扩展模式
 **经典技术策略**
@@ -29,10 +35,12 @@
 - 加权聚合：每个子策略一个权重，输出加权净分大于 0 做多、小于 0 做空
 - 例：MA 50% + RSI 30% + Donchian 20%
 
-**Agent LLM 策略** — 每日扫描时调 Gemini 分析 K 线 + 指标，按 (策略, 标的, 日期) 缓存决策：
-- 你写一句系统提示词（"你是趋势型交易员…"）
-- Gemini 看 60 根 K 线 + RSI/SMA/EMA/ATR + 通道指标 → 输出 `{side, confidence, reason}`
-- 同一天重复扫描走 DB 缓存，不重复消耗 LLM 配额
+**Agent 看盘式策略** — Gemini 实时分析单个标的，输出**可执行的交易计划**：
+- 系统提示词控制 Agent 风格（"你是趋势型交易员，关注 close 是否站上 SMA50…"）
+- Gemini 看最近 60 根 K 线 + RSI/SMA/EMA/ATR + 通道指标 → 输出 `{side, confidence, entry_price, stop_loss, take_profit, reason}`
+- 价位线直接画在 K 线图上：🟢 入场 / 🔴 止损 / 🟡 止盈
+- 按 (策略, 标的, 行情日期) 缓存，重复打开同一品种不烧 token；"重算"按钮强制刷新
+- 同样可用于每日批量扫描，按 max_trades_per_day 选 top-K 出单
 
 ### 📈 完整的回测引擎
 - Equity / Drawdown / 月收益热力图 / 标的拆解

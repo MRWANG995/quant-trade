@@ -43,12 +43,32 @@ export function AgentWatchPanel({ instrumentId, symbol, onLevelsChange }: Props)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 切到新品种时清掉旧结果
+  // 切到新品种 / 新策略时：清旧结果，并尝试读已缓存的决策（不触发 LLM）
   useEffect(() => {
     setResult(null);
     onLevelsChange?.([]);
     setError(null);
-  }, [instrumentId]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!selectedId) return;
+    let cancelled = false;
+    api
+      .agentCachedDecision(selectedId as number, instrumentId)
+      .then((cached) => {
+        if (cancelled || !cached) return;
+        setResult(cached);
+        const levels: PriceLevel[] = [];
+        if (cached.entry_price != null)
+          levels.push({ label: `入场 ${cached.entry_price.toFixed(2)}`, price: cached.entry_price, color: "#22c55e" });
+        if (cached.stop_loss != null)
+          levels.push({ label: `止损 ${cached.stop_loss.toFixed(2)}`, price: cached.stop_loss, color: "#ef4444" });
+        if (cached.take_profit != null)
+          levels.push({ label: `止盈 ${cached.take_profit.toFixed(2)}`, price: cached.take_profit, color: "#facc15" });
+        onLevelsChange?.(levels);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [instrumentId, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const analyze = useCallback(
     async (force: boolean) => {

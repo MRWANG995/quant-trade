@@ -127,6 +127,22 @@ export const api = {
       `/api/agent/analyze?strategy_id=${strategyId}&instrument_id=${instrumentId}&force=${force}`,
       { method: "POST" }
     ),
+  /** 只读：无缓存时返回 null（204），不触发 LLM */
+  agentCachedDecision: async (
+    strategyId: number,
+    instrumentId: number
+  ): Promise<AgentDecisionResult | null> => {
+    const token = getStoredToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const res = await fetch(
+      `${API_URL}/api/agent/decision?strategy_id=${strategyId}&instrument_id=${instrumentId}`,
+      { headers, cache: "no-store" }
+    );
+    if (res.status === 204) return null;
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    return (await res.json()) as AgentDecisionResult;
+  },
 };
 
 export interface AgentDecisionResult {
