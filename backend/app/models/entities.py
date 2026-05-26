@@ -28,6 +28,7 @@ class AssetClass(str, enum.Enum):
     metal = "metal"
     futures = "futures"
     equity = "equity"
+    crypto = "crypto"
 
 
 class BrokerHint(str, enum.Enum):

@@ -3,16 +3,13 @@
 from dataclasses import dataclass
 from typing import Literal, Optional, Union
 
-ProviderName = Literal["stooq", "alphavantage", "frankfurter", "yfinance"]
+ProviderName = Literal[
+    "stooq", "alphavantage", "frankfurter", "yfinance", "binance", "coinbase"
+]
 
 # 零配置回退：Yahoo 真实日 K（非模拟，易限流）
 YFINANCE_SYMBOLS: dict[str, str] = {
-    "EURUSD": "EURUSD=X",
-    "GBPUSD": "GBPUSD=X",
-    "USDJPY": "USDJPY=X",
     "XAUUSD": "GC=F",
-    "ES": "ES=F",
-    "CL": "CL=F",
     # 美股 Magnificent 7
     "AAPL": "AAPL",
     "MSFT": "MSFT",
@@ -21,9 +18,7 @@ YFINANCE_SYMBOLS: dict[str, str] = {
     "NVDA": "NVDA",
     "META": "META",
     "TSLA": "TSLA",
-    # 补充美股 ETF
-    "SPY": "SPY",
-    "QQQ": "QQQ",
+    # BTC 不走 yfinance（Binance 本身就是主路径）
 }
 
 
@@ -49,8 +44,23 @@ class FrankfurterFxRef:
     quote: str
 
 
+@dataclass(frozen=True)
+class BinanceRef:
+    symbol: str  # 例：BTCUSDT
+
+
+@dataclass(frozen=True)
+class CoinbaseRef:
+    product_id: str  # 例：BTC-USD
+
+
 ProviderRef = Union[
-    StooqRef, AlphaVantageFxRef, AlphaVantageEquityRef, FrankfurterFxRef
+    StooqRef,
+    AlphaVantageFxRef,
+    AlphaVantageEquityRef,
+    FrankfurterFxRef,
+    BinanceRef,
+    CoinbaseRef,
 ]
 
 
@@ -69,36 +79,21 @@ def _equity_config(ticker: str, stooq_sym: str) -> InstrumentDataConfig:
 
 
 INSTRUMENT_DATA: dict[str, InstrumentDataConfig] = {
-    "EURUSD": InstrumentDataConfig(
+    # 加密货币：Coinbase 全球可用（Binance 在美国地区 451 被封）；Binance 留作 fallback
+    "BTC": InstrumentDataConfig(
         providers=(
-            ("stooq", StooqRef("eurusd")),
-            ("alphavantage", AlphaVantageFxRef("EUR", "USD")),
-            ("frankfurter", FrankfurterFxRef("EUR", "USD")),
+            ("coinbase", CoinbaseRef("BTC-USD")),
+            ("binance", BinanceRef("BTCUSDT")),
         )
     ),
-    "GBPUSD": InstrumentDataConfig(
-        providers=(
-            ("stooq", StooqRef("gbpusd")),
-            ("alphavantage", AlphaVantageFxRef("GBP", "USD")),
-            ("frankfurter", FrankfurterFxRef("GBP", "USD")),
-        )
-    ),
-    "USDJPY": InstrumentDataConfig(
-        providers=(
-            ("stooq", StooqRef("usdjpy")),
-            ("alphavantage", AlphaVantageFxRef("USD", "JPY")),
-            ("frankfurter", FrankfurterFxRef("USD", "JPY")),
-        )
-    ),
+    # 黄金
     "XAUUSD": InstrumentDataConfig(
         providers=(
             ("stooq", StooqRef("xauusd")),
             ("alphavantage", AlphaVantageFxRef("XAU", "USD")),
         )
     ),
-    "ES": InstrumentDataConfig(providers=(("stooq", StooqRef("es.c")),)),
-    "CL": InstrumentDataConfig(providers=(("stooq", StooqRef("cl.c")),)),
-    # Magnificent 7
+    # 美股 Magnificent 7
     "AAPL": _equity_config("AAPL", "aapl.us"),
     "MSFT": _equity_config("MSFT", "msft.us"),
     "GOOGL": _equity_config("GOOGL", "googl.us"),
@@ -106,8 +101,6 @@ INSTRUMENT_DATA: dict[str, InstrumentDataConfig] = {
     "NVDA": _equity_config("NVDA", "nvda.us"),
     "META": _equity_config("META", "meta.us"),
     "TSLA": _equity_config("TSLA", "tsla.us"),
-    "SPY": _equity_config("SPY", "spy.us"),
-    "QQQ": _equity_config("QQQ", "qqq.us"),
 }
 
 

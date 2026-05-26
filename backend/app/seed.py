@@ -8,35 +8,17 @@ from app.strategies.service import clear_default_flag
 
 # symbol, 中文名, yfinance_symbol（库内字段）, Stooq/展示用
 DEFAULT_INSTRUMENTS = [
-    # 外汇
+    # 加密货币（走 Binance 公共 API）
     {
-        "symbol": "EURUSD",
-        "name": "欧元/美元",
-        "yfinance_symbol": "eurusd",
-        "asset_class": AssetClass.forex,
-        "broker_hint": BrokerHint.oanda,
-        "pip_value": 0.0001,
-        "contract_size": 100_000,
-    },
-    {
-        "symbol": "GBPUSD",
-        "name": "英镑/美元",
-        "yfinance_symbol": "gbpusd",
-        "asset_class": AssetClass.forex,
-        "broker_hint": BrokerHint.oanda,
-        "pip_value": 0.0001,
-        "contract_size": 100_000,
-    },
-    {
-        "symbol": "USDJPY",
-        "name": "美元/日元",
-        "yfinance_symbol": "usdjpy",
-        "asset_class": AssetClass.forex,
-        "broker_hint": BrokerHint.oanda,
+        "symbol": "BTC",
+        "name": "比特币 Bitcoin",
+        "yfinance_symbol": "BTCUSDT",  # 这里直接是 Binance 的 trading pair
+        "asset_class": AssetClass.crypto,
+        "broker_hint": BrokerHint.ib,   # 暂用占位，等真有加密 broker 适配器再换
         "pip_value": 0.01,
-        "contract_size": 100_000,
+        "contract_size": 1,
     },
-    # 商品 / 期货
+    # 现货黄金
     {
         "symbol": "XAUUSD",
         "name": "现货黄金",
@@ -45,24 +27,6 @@ DEFAULT_INSTRUMENTS = [
         "broker_hint": BrokerHint.ib,
         "pip_value": 0.1,
         "contract_size": 100,
-    },
-    {
-        "symbol": "ES",
-        "name": "标普500期货",
-        "yfinance_symbol": "es.f",
-        "asset_class": AssetClass.futures,
-        "broker_hint": BrokerHint.ib,
-        "pip_value": 0.25,
-        "contract_size": 50,
-    },
-    {
-        "symbol": "CL",
-        "name": "WTI原油期货",
-        "yfinance_symbol": "cl.f",
-        "asset_class": AssetClass.futures,
-        "broker_hint": BrokerHint.ib,
-        "pip_value": 0.01,
-        "contract_size": 1000,
     },
     # 美股 Magnificent 7
     {
@@ -123,25 +87,6 @@ DEFAULT_INSTRUMENTS = [
         "symbol": "TSLA",
         "name": "特斯拉 Tesla",
         "yfinance_symbol": "TSLA",
-        "asset_class": AssetClass.equity,
-        "broker_hint": BrokerHint.ib,
-        "pip_value": 0.01,
-        "contract_size": 1,
-    },
-    # 美股宽基 ETF
-    {
-        "symbol": "SPY",
-        "name": "标普500 ETF",
-        "yfinance_symbol": "SPY",
-        "asset_class": AssetClass.equity,
-        "broker_hint": BrokerHint.ib,
-        "pip_value": 0.01,
-        "contract_size": 1,
-    },
-    {
-        "symbol": "QQQ",
-        "name": "纳斯达克100 ETF",
-        "yfinance_symbol": "QQQ",
         "asset_class": AssetClass.equity,
         "broker_hint": BrokerHint.ib,
         "pip_value": 0.01,
