@@ -5,6 +5,7 @@ import {
   CandlestickSeries,
   ColorType,
   LineSeries,
+  LineStyle,
   createChart,
   createSeriesMarkers,
   type SeriesMarker,
@@ -25,6 +26,13 @@ export type LineOverlay = {
   value: number;
 };
 
+export type PriceLevel = {
+  label: string;
+  price: number;
+  color: string;       // hex
+  lineStyle?: "solid" | "dashed" | "dotted";
+};
+
 type Props = {
   bars: Bar[];
   markers?: ChartMarker[];
@@ -32,10 +40,12 @@ type Props = {
     fast_ma?: LineOverlay[];
     slow_ma?: LineOverlay[];
   };
+  // 水平价位线（Agent 看盘的 entry / stop_loss / take_profit）
+  priceLevels?: PriceLevel[];
   height?: number;
 };
 
-export function CandlestickChart({ bars, markers = [], overlays, height = 420 }: Props) {
+export function CandlestickChart({ bars, markers = [], overlays, priceLevels = [], height = 420 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -112,6 +122,23 @@ export function CandlestickChart({ bars, markers = [], overlays, height = 420 }:
       createSeriesMarkers(series, lwMarkers);
     }
 
+    // Agent 看盘价位线：entry/SL/TP 以水平虚线画在主图上
+    for (const lvl of priceLevels) {
+      const styleMap: Record<string, LineStyle> = {
+        solid: LineStyle.Solid,
+        dashed: LineStyle.Dashed,
+        dotted: LineStyle.Dotted,
+      };
+      series.createPriceLine({
+        price: lvl.price,
+        color: lvl.color,
+        lineWidth: 2,
+        lineStyle: styleMap[lvl.lineStyle || "dashed"],
+        axisLabelVisible: true,
+        title: lvl.label,
+      });
+    }
+
     chart.timeScale().fitContent();
 
     const handleResize = () => {
@@ -125,7 +152,7 @@ export function CandlestickChart({ bars, markers = [], overlays, height = 420 }:
       window.removeEventListener("resize", handleResize);
       chart.remove();
     };
-  }, [bars, markers, overlays, height]);
+  }, [bars, markers, overlays, priceLevels, height]);
 
   if (bars.length === 0) {
     return (

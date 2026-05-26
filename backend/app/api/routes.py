@@ -360,6 +360,47 @@ async def sync_one(instrument_id: int, session: AsyncSession = Depends(get_db)):
     return {"symbol": inst.symbol, "inserted": count}
 
 
+@router.post("/agent/analyze")
+async def agent_analyze_instrument(
+    strategy_id: int,
+    instrument_id: int,
+    force: bool = False,
+    session: AsyncSession = Depends(get_db),
+):
+    """Agent 看盘：对指定品种实时调 LLM 给出入场/止损/止盈。
+
+    - 默认按 (strategy, instrument, 最新行情日期) 维度缓存，重复请求不烧 token
+    - force=true 强制重新分析
+    - 仅适用于 strategy_type='agent' 的策略
+    """
+    from datetime import date
+    from sqlalchemy import select, func
+    from app.models.entities import Bar, Instrument, StrategyDefinition
+    from app.strategies.agent_runner import analyze_single_instrument
+    from app.llm.base import LLMError
+
+    strategy = await session.get(StrategyDefinition, strategy_id)
+    if not strategy or not strategy.is_active:
+        raise HTTPException(404, "策略不存在或已停用")
+    if strategy.strategy_type != "agent":
+        raise HTTPException(400, "该接口仅支持 agent 类型的策略")
+    inst = await session.get(Instrument, instrument_id)
+    if not inst:
+        raise HTTPException(404, "Instrument not found")
+
+    # 用该标的最新一根 K 线的日期作为决策日期（保证缓存按行情而非"今天"分桶）
+    latest = await session.scalar(
+        select(func.max(Bar.trade_date)).where(Bar.instrument_id == inst.id)
+    )
+    if not latest:
+        raise HTTPException(400, f"{inst.symbol} 暂无 K 线，请先同步行情")
+
+    try:
+        return await analyze_single_instrument(session, strategy, inst, latest, force_refresh=force)
+    except LLMError as exc:
+        raise HTTPException(400, f"LLM 调用失败：{exc}") from exc
+
+
 @router.get("/run-logs")
 async def run_logs(
     limit: int = 30,

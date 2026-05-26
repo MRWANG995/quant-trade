@@ -228,6 +228,10 @@ class AgentDecision(Base):
     side: Mapped[str] = mapped_column(String(8))  # long/short/hold
     confidence: Mapped[float] = mapped_column(Float)
     reason: Mapped[str] = mapped_column(Text, default="")
+    # 看盘式 Agent 的具体价位（可空，旧决策没有这些字段）
+    entry_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    stop_loss: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    take_profit: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     raw_output: Mapped[Optional[dict[str, Any]]] = mapped_column(JSON, nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

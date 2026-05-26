@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CandlestickChart } from "@/components/CandlestickChart";
+import { CandlestickChart, type PriceLevel } from "@/components/CandlestickChart";
+import { AgentWatchPanel } from "@/components/AgentWatchPanel";
 import type { Bar, Instrument } from "@/lib/api";
 import { api } from "@/lib/api";
 
 const TABS = [
   { key: "all", label: "全部" },
-  { key: "forex", label: "外汇" },
+  { key: "crypto", label: "加密" },
   { key: "metal", label: "黄金" },
-  { key: "futures", label: "期货" },
   { key: "equity", label: "美股" },
 ];
 
@@ -20,6 +20,8 @@ export function InstrumentsClient({ instruments }: { instruments: Instrument[] }
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  // Agent 看盘的价位线（entry / SL / TP）
+  const [agentLevels, setAgentLevels] = useState<PriceLevel[]>([]);
 
   const filtered =
     tab === "all" ? instruments : instruments.filter((i) => i.asset_class === tab);
@@ -82,7 +84,7 @@ export function InstrumentsClient({ instruments }: { instruments: Instrument[] }
       <div>
         <h1 className="text-2xl font-bold">行情</h1>
         <p className="text-sm text-zinc-500">
-          日 K 线 · 含 Magnificent 7（AAPL/MSFT/GOOGL/AMZN/NVDA/META/TSLA）及 SPY/QQQ
+          日 K 线 · BTC（Coinbase）+ XAUUSD + Magnificent 7（AAPL/MSFT/GOOGL/AMZN/NVDA/META/TSLA） · Agent 看盘可一键标注入场/止损/止盈
         </p>
       </div>
 
@@ -145,7 +147,16 @@ export function InstrumentsClient({ instruments }: { instruments: Instrument[] }
                   </button>
                 </div>
               ) : (
-                <CandlestickChart bars={bars} />
+                <>
+                  <CandlestickChart bars={bars} priceLevels={agentLevels} />
+                  <div className="mt-4">
+                    <AgentWatchPanel
+                      instrumentId={selected.id}
+                      symbol={selected.symbol}
+                      onLevelsChange={setAgentLevels}
+                    />
+                  </div>
+                </>
               )}
             </>
           )}

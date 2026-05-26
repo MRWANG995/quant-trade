@@ -122,7 +122,26 @@ export const api = {
     fetchApi<{ ok: boolean; message: string; bar_count?: number; last_date?: string }>(
       "/api/data/stooq-test"
     ),
+  agentAnalyze: (strategyId: number, instrumentId: number, force = false) =>
+    fetchApi<AgentDecisionResult>(
+      `/api/agent/analyze?strategy_id=${strategyId}&instrument_id=${instrumentId}&force=${force}`,
+      { method: "POST" }
+    ),
 };
+
+export interface AgentDecisionResult {
+  instrument_id: number;
+  symbol: string;
+  decision_date: string;
+  side: "long" | "short" | "hold";
+  confidence: number;
+  entry_price: number | null;
+  stop_loss: number | null;
+  take_profit: number | null;
+  reason: string;
+  model: string | null;
+  cached: boolean;
+}
 
 export interface AuthUser {
   id: number;
